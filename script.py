@@ -4,6 +4,12 @@ import sys
 import os
 from pynput.mouse import Button, Controller
 
+# On Windows, use winsound for quick system sounds on toggle.
+try:
+    import winsound
+except Exception:
+    winsound = None
+
 # --- CONFIGURATION ---
 MAX_SPEED = 12 
 ACCELERATION = 2 
@@ -76,7 +82,17 @@ def main():
                 script_active = not script_active  # Toggle the state
                 state_text = "ACTIVE" if script_active else "PAUSED"
                 print(f"CouchCursor State: {state_text}")
-                
+
+                # Play a short system sound to give audible feedback (Windows only)
+                if winsound:
+                    try:
+                        if script_active:
+                            winsound.MessageBeep(winsound.MB_OK)
+                        else:
+                            winsound.MessageBeep(winsound.MB_ICONHAND)
+                    except Exception:
+                        pass
+
                 # Wait half a second so it doesn't flicker on/off 60 times a second
                 pygame.time.wait(500) 
 
