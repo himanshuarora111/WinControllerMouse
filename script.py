@@ -1,3 +1,4 @@
+from __future__ import annotations
 import ctypes
 import os
 import subprocess
@@ -261,35 +262,24 @@ def trigger_pressed(axis_value: float) -> bool:
 
 def launch_touch_keyboard() -> None:
     """
-    Opens the Windows touch keyboard.
-
-    The direct path works on many Windows 10/11 installs. The cmd fallback
-    works when TabTip.exe is available through shell resolution.
+    Opens the Windows touch keyboard, with a fallback to the OSK keyboard.
     """
     if not IS_WINDOWS:
         return
 
-    candidates = [
-        os.path.expandvars(r"%ProgramFiles%\Common Files\microsoft shared\ink\TabTip.exe"),
-        os.path.expandvars(r"%CommonProgramFiles%\microsoft shared\ink\TabTip.exe"),
-    ]
-
-    for path in candidates:
-        try:
-            if path and os.path.exists(path):
-                os.startfile(path)
-                return
-        except Exception:
-            pass
-
     try:
-        subprocess.Popen(
-            ["cmd", "/c", "start", "", "tabtip.exe"],
-            shell=False,
-            creationflags=CREATE_NO_WINDOW,
-        )
-    except Exception:
-        pass
+        # 1. First try TabTip (Windows 10/11 Touch Keyboard)
+        subprocess.Popen(['cmd', '/c', 'start', 'tabtip.exe'], shell=True)
+        
+        # Give Windows a tiny moment to process the command
+        time.sleep(0.2)
+        
+        # 2. Fire the OSK fallback just in case TabTip fails to appear
+        # (Windows will usually ignore the second command if TabTip is already taking focus)
+        subprocess.Popen(['osk.exe'], shell=True)
+        
+    except Exception as exc:
+        print(f"{APP_NAME}: Failed to launch keyboard: {exc}")
 
 
 def is_blocked_process_running() -> bool:
@@ -338,16 +328,16 @@ class ControlOverlay:
 
         self.label = tk.Label(
             self.root,
-            text="",
+            text=f"{APP_NAME}: Initializing...",
             justify="left",
-            anchor="w",
+            anchor="nw",
             bg=self.bg,
             fg=self.fg,
-            padx=12,
-            pady=9,
-            font=("Segoe UI", 9),
+            padx=15,
+            pady=10,
+            font=("Consolas", 10),
         )
-        self.label.pack()
+        self.label.pack(expand=True, fill="both")
 
         self.root.update_idletasks()
         self._position_top_right()
@@ -357,7 +347,7 @@ class ControlOverlay:
         try:
             self.root.update_idletasks()
             screen_width = self.root.winfo_screenwidth()
-            window_width = self.root.winfo_width()
+            window_width = self.root.winfo_reqwidth()
 
             x = max(0, screen_width - window_width - 20)
             y = 20
@@ -369,14 +359,14 @@ class ControlOverlay:
     def _make_click_through(self) -> None:
         """
         Make the overlay ignore mouse clicks on Windows.
-
-        This prevents the overlay from blocking clicks in the top-right area.
         """
         if not IS_WINDOWS:
             return
 
         try:
-            hwnd = self.root.winfo_id()
+            # Using wm_frame() gets the top-level OS window container.
+            # Using winfo_id() just gets the client area, which causes the black screen bug.
+            hwnd = int(self.root.wm_frame(), 16)
 
             GWL_EXSTYLE = -20
             WS_EX_LAYERED = 0x00080000
@@ -856,9 +846,6 @@ def build_overlay_text(
 
 def get_first_joystick() -> pygame.joystick.Joystick | None:
     try:
-        pygame.joystick.quit()
-        pygame.joystick.init()
-
         if pygame.joystick.get_count() <= 0:
             return None
 
