@@ -681,12 +681,6 @@ def handle_button_event(
     is_up = event.type == pygame.JOYBUTTONUP
     button = event.button
 
-    # View / Back toggles overlay even when paused.
-    if is_down and button == BUTTON_VIEW:
-        if overlay is not None:
-            overlay.toggle()
-        return
-
     # Menu / Start:
     # tap = Enter
     # hold = pause/resume
@@ -707,6 +701,12 @@ def handle_button_event(
 
     # Other controls only work while active and not blocked.
     if not state.script_active or state.valorant_detected:
+        return
+
+    # View / Back toggles overlay even when paused.
+    if is_down and button == BUTTON_VIEW:
+        if overlay is not None:
+            overlay.toggle()
         return
 
     if button == BUTTON_A:
