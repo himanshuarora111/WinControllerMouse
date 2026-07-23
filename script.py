@@ -892,8 +892,12 @@ def main() -> None:
     if joystick is not None:
         print(f"{APP_NAME}: Controller connected: {joystick.get_name()}")
         wake_cursor(mouse)
+        if overlay is not None:
+            overlay.show()
     else:
         print(f"{APP_NAME}: Waiting for controller...")
+        if overlay is not None:
+            overlay.hide()
 
     speed_mode = "NORMAL"
 
@@ -911,6 +915,8 @@ def main() -> None:
                     print(f"{APP_NAME}: Controller disconnected.")
                     release_all_inputs(mouse, keyboard, state)
                     joystick = None
+                    if overlay is not None:
+                        overlay.hide()
                     continue
 
                 if event.type == pygame.JOYDEVICEADDED:
@@ -919,6 +925,8 @@ def main() -> None:
                         if joystick is not None:
                             print(f"{APP_NAME}: Controller connected: {joystick.get_name()}")
                             wake_cursor(mouse)
+                            if overlay is not None:
+                                overlay.show()
                     continue
 
                 if event.type in (pygame.JOYBUTTONDOWN, pygame.JOYBUTTONUP):
@@ -930,6 +938,8 @@ def main() -> None:
                 if joystick is not None:
                     print(f"{APP_NAME}: Controller connected: {joystick.get_name()}")
                     wake_cursor(mouse)
+                    if overlay is not None:
+                        overlay.show()
 
             handle_menu_hold(mouse, keyboard, state)
             check_valorant_auto_pause(mouse, keyboard, state)
@@ -943,7 +953,10 @@ def main() -> None:
                 speed_mode = "NORMAL"
 
             if overlay is not None:
-                overlay.update(build_overlay_text(joystick, state, speed_mode))
+                if joystick is None:
+                    overlay.hide()
+                else:
+                    overlay.update(build_overlay_text(joystick, state, speed_mode))
 
     finally:
         release_all_inputs(mouse, keyboard, state)
